@@ -2,6 +2,9 @@ const Phoenixa = require('./phoenixa');
 
 // ----- Database ------ //
 
+// Sample objects => {id: 1, token: 220379239}
+const SESSIONS = [];
+
 const USERS = [
   {id: 1, name: 'Liam', username: 'liam', password: 'string'},
   {id: 2, name: 'Jane', username: 'jane', password: 'string'},
@@ -51,6 +54,10 @@ server.route('get', '/', (request, response) => {
   response.sendFile('./public/index.html', 'text/html');
 });
 
+server.route('get', '/profile', (request, response) => {
+  response.sendFile('./public/index.html', 'text/html');
+});
+
 server.route('get', '/login', (request, response) => {
   response.sendFile('./public/index.html', 'text/html');
 });
@@ -64,10 +71,12 @@ server.route('get', '/scripts.js', (request, response) => {
 });
 
 // ----- JSON Routes ------ //
+
+// Log a user in and give them a token
 server.route('post', '/api/login', (request, response) => {
   let data = '';
   request.on('data', chunk => {
-    data += chunk.toString('utf-8');
+    data += chunk.toString();
   });
   
   request.on('end', () => {
@@ -81,14 +90,49 @@ server.route('post', '/api/login', (request, response) => {
     
     // Check the password if the user was found
     if (user && user.password === password) {
-      // At this point, we know client is who he say he is.
+      // At this point, we know a client is who he says he is.
+      // Generating user token and creating a user session
+      const token = Math.floor(Math.random() * 1000000000).toString();
+      SESSIONS.push({id: user.id, token: token});
+      
+      response.setHeader('Set-Cookies', `token=${token}; Path=/;`);
+      
       response.status(200).json({message: 'Logged in Successfully'});
+      console.log(`User with id ${user.id} logged in!`);
     } else {
       response.status(401).json({message: 'Invalid username or password'});
     }
   });
 });
 
+// todo: Log user out
+server.route('delete', '/api/logout/', (request, response) => {
+
+});
+
+// todo: Update user information
+server.route('put', '/api/user',  (request, response) => {
+
+});
+
+// Send user info
+server.route('get', '/api/user', (request, response) => {
+  try {
+    const token = request.headers.cookie.split('=')[1];
+    
+    const session = SESSIONS.find(session => session.token === token);
+    if (session) {
+      const user = USERS.find(user => user.id === session.id);
+      response.json({username: user.username, name: user.name});
+    } else {
+      response.status(401).json({message: 'Unauthorized request'});
+    }
+  } catch (error) {
+    console.log('User not found');
+  }
+});
+
+// See the lists of all the posts that we have
 server.route('get', '/api/posts', (request, response) => {
   const posts = POSTS.map((post) => {
     post.author = USERS[post.userId - 1].name;
@@ -96,4 +140,9 @@ server.route('get', '/api/posts', (request, response) => {
   });
   
   response.status(200).json(posts);
+});
+
+// todo: Create a new post
+server.route('post', '/api/new-post', (request, response) => {
+
 });
