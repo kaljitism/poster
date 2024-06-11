@@ -54,6 +54,10 @@ server.route('get', '/', (request, response) => {
   response.sendFile('./public/index.html', 'text/html');
 });
 
+server.route('get', '/profile', (request, response) => {
+  response.sendFile('./public/index.html', 'text/html');
+});
+
 server.route('get', '/login', (request, response) => {
   response.sendFile('./public/index.html', 'text/html');
 });
@@ -101,7 +105,17 @@ server.route('post', '/api/login', (request, response) => {
   });
 });
 
+// todo: Log user out
+server.route('delete', '/api/logout/', (request, response) => {
 
+});
+
+// todo: Update user information
+server.route('put', '/api/user',  (request, response) => {
+
+});
+
+// Send user info
 server.route('get', '/api/user', (request, response) => {
   try {
     const token = request.headers.cookie.split('=')[1];
@@ -109,7 +123,7 @@ server.route('get', '/api/user', (request, response) => {
     const session = SESSIONS.find(session => session.token === token);
     if (session) {
       const user = USERS.find(user => user.id === session.id);
-      response.write(JSON.stringify(user));
+      response.json({username: user.username, name: user.name});
     } else {
       response.status(401).json({message: 'Unauthorized request'});
     }
@@ -126,4 +140,9 @@ server.route('get', '/api/posts', (request, response) => {
   });
   
   response.status(200).json(posts);
+});
+
+// todo: Create a new post
+server.route('post', '/api/new-post', (request, response) => {
+
 });
