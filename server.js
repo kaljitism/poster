@@ -38,7 +38,7 @@ const POSTS = [
   },
 ];
 
-const PORT = 9003;
+const PORT = 9000;
 
 const server = new Phoenixa();
 
@@ -89,6 +89,12 @@ server.route('post', '/api/login', (request, response) => {
   });
 });
 
+
+server.route('get', '/api/user', (request, response) => {
+
+});
+
+// See the lists of all the posts that we have
 server.route('get', '/api/posts', (request, response) => {
   const posts = POSTS.map((post) => {
     post.author = USERS[post.userId - 1].name;

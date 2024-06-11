@@ -72,15 +72,21 @@ server.route('post', '/api/login', (request, response) => {
   
   request.on('end', () => {
     data = JSON.parse(data);
-    USERS.push({
-      id: USERS.length,
-      name: data.username,
-      username: data.username,
-      password: data.password,
-    });
+    
+    const username = data.username;
+    const password = data.password;
+    
+    // Check if user exists
+    const user = USERS.find(user => user.username === username)
+    
+    // Check the password if the user was found
+    if (user && user.password === password) {
+      // At this point, we know client is who he say he is.
+      response.status(200).json({message: 'Logged in Successfully'});
+    } else {
+      response.status(401).json({message: 'Invalid username or password'});
+    }
   });
-  
-  response.status(200).json(USERS);
 });
 
 server.route('get', '/api/posts', (request, response) => {

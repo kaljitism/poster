@@ -40,31 +40,31 @@ const POSTS = [
 
 const PORT = 9002;
 
-const server2 = new Phoenixa();
+const server = new Phoenixa();
 
-server2.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log('Server has started on port ' + PORT);
 });
 
 // ----- Files Routes ------ //
-server2.route('get', '/', (request, response) => {
+server.route('get', '/', (request, response) => {
   response.sendFile('./public/index.html', 'text/html');
 });
 
-server2.route('get', '/login', (request, response) => {
+server.route('get', '/login', (request, response) => {
   response.sendFile('./public/index.html', 'text/html');
 });
 
-server2.route('get', '/styles.css', (request, response) => {
+server.route('get', '/styles.css', (request, response) => {
   response.sendFile('./public/styles.css', 'text/css');
 });
 
-server2.route('get', '/scripts.js', (request, response) => {
+server.route('get', '/scripts.js', (request, response) => {
   response.sendFile('./public/scripts.js', 'text/javascript');
 });
 
 // ----- JSON Routes ------ //
-server2.route('post', '/api/login', (request, response) => {
+server.route('post', '/api/login', (request, response) => {
   let data = '';
   request.on('data', chunk => {
     data += chunk.toString('utf-8');
@@ -72,18 +72,24 @@ server2.route('post', '/api/login', (request, response) => {
   
   request.on('end', () => {
     data = JSON.parse(data);
-    USERS.push({
-      id: USERS.length,
-      name: data.username,
-      username: data.username,
-      password: data.password,
-    });
+    
+    const username = data.username;
+    const password = data.password;
+    
+    // Check if user exists
+    const user = USERS.find(user => user.username === username)
+    
+    // Check the password if the user was found
+    if (user && user.password === password) {
+      // At this point, we know client is who he say he is.
+      response.status(200).json({message: 'Logged in Successfully'});
+    } else {
+      response.status(401).json({message: 'Invalid username or password'});
+    }
   });
-  
-  response.status(200).json(USERS);
 });
 
-server2.route('get', '/api/posts', (request, response) => {
+server.route('get', '/api/posts', (request, response) => {
   const posts = POSTS.map((post) => {
     post.author = USERS[post.userId - 1].name;
     return post;
