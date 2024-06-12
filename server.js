@@ -45,12 +45,27 @@ const PORT = 9000;
 
 const server = new Phoenixa();
 
-server.listen(PORT, () => {
-  console.log('Server has started on port ' + PORT);
+// Middlewares
+server.beforeEach((request, response, next) => {
+  console.log('Middleware Function Index 1');
+  next();
+});
+
+server.beforeEach((request, response, next) => {
+  setTimeout(() => {
+    console.log('Middleware Function Index 2');
+    next();
+  }, 2000);
+});
+
+server.beforeEach((request, response, next) => {
+  console.log('Middleware Function Index 3');
+  next();
 });
 
 // ----- Files Routes ------ //
 server.route('get', '/', (request, response) => {
+  console.log('This is the / route!')
   response.sendFile('./public/index.html', 'text/html');
 });
 
@@ -145,4 +160,8 @@ server.route('get', '/api/posts', (request, response) => {
 // todo: Create a new post
 server.route('post', '/api/new-post', (request, response) => {
 
+});
+
+server.listen(PORT, () => {
+  console.log('Server has started on port ' + PORT);
 });
