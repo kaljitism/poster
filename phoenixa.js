@@ -36,25 +36,23 @@ class Phoenixa {
         if (index === middlewares.length) {
           // If the routes object does not have a key of request.method + request.url,
           // return 404
-          if (!this.routes[request.method.toLowerCase() + ' ' + request.url]) {
-            console.log(this.routes[request.method.toLowerCase() + ' ' + request.url]);
+          if (!this.routes[request.method + request.url]) {
             return response.status(404).
                 json({error: `Cannot ${request.method} ${request.url}`});
           }
           
           // Middlewares have completed their jobs, now we want to run routes.
-          this.routes[request.method.toLowerCase() + request.url](request,
+          this.routes[request.method + request.url](request,
               response);
         } else {
           
           // We have more middlewares to run, so continue running them
           middlewares[index](request, response, () => {
-            console.log('hi')
             runMiddleware(
                 request,
                 response,
                 middlewares,
-                index+1);
+                index + 1);
           });
         }
       };
