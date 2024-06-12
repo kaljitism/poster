@@ -14,7 +14,8 @@ class Phoenixa {
         return response;
       };
       
-      // Send JSON data back to the client (for small JSON Data less than highWaterMarkValue)
+      // todo: Send JSON data back to the client (for small JSON Data less
+      //  than highWaterMarkValue)
       response.json = (data) => {
         response.setHeader('Content-Type', 'application/json');
         response.end(JSON.stringify(data));
@@ -35,7 +36,8 @@ class Phoenixa {
         if (index === middlewares.length) {
           // If the routes object does not have a key of request.method + request.url,
           // return 404
-          if (!this.routes[request.method.toLowerCase() + request.url]) {
+          if (!this.routes[request.method.toLowerCase() + ' ' + request.url]) {
+            console.log(this.routes[request.method.toLowerCase() + ' ' + request.url]);
             return response.status(404).
                 json({error: `Cannot ${request.method} ${request.url}`});
           }
@@ -47,6 +49,7 @@ class Phoenixa {
           
           // We have more middlewares to run, so continue running them
           middlewares[index](request, response, () => {
+            console.log('hi')
             runMiddleware(
                 request,
                 response,
@@ -57,17 +60,6 @@ class Phoenixa {
       };
       
       runMiddleware(request, response, this.middlewares, 0);
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
     });
   }
   
