@@ -1,4 +1,5 @@
 const Phoenixa = require('./phoenixa');
+const constants = require('node:constants');
 
 // ----- Database ------ //
 
@@ -80,43 +81,42 @@ server.beforeEach((request, response, next) => {
 });
 
 // JSON Body Parser Middleware
-server.beforeEach((request, response, next) => {
+const parseJSON = (request, response, next) => {
   if (request.headers['content-type'] === 'application/json') {
-    if (request.headers['content-length'] < request.highWaterMark) {
-      // Only good for JSON bodies smaller than highWatermarkValue
-      // If the JSON body is large, write it back as a stream
-      let data = '';
-      request.on('data', chunk => {
-        data += chunk.toString();
-      });
-      
-      request.on('end', () => {
-        data = JSON.parse(data);
-        request.body = data;
-        return next();
-      });
-    } else {
-      // todo: JSON Body is larger than highWatermarkValue handle through
-      //  piping
-      next();
-    }
+    
+    // Only good for JSON bodies smaller than highWatermarkValue
+    // If the JSON body is large, write it back as a stream
+    // todo: JSON Body is larger than highWatermarkValue handle through
+    //  piping
+    let data = '';
+    request.on('data', chunk => {
+      data += chunk.toString();
+    });
+    
+    request.on('end', () => {
+      data = JSON.parse(data);
+      request.body = data;
+      return next();
+    });
   } else {
     next();
   }
-  
-});
+};
+
+// For parsing JSON body
+server.beforeEach(parseJSON);
 
 // Middleware that serves HTML to routes
 server.beforeEach((request, response, next) => {
   const routesToServe = [
     '/',
-    '/new-post',
-    '/profile',
     '/login',
+    '/profile',
+    '/new-post',
   ];
   
   if (routesToServe.indexOf(request.url) !== -1 && request.method === 'GET') {
-    return response.status(200).sendFile('./public/index.html', 'text/html');
+    return response.status(201).sendFile('./public/index.html', 'text/html');
   } else {
     next();
   }
@@ -124,19 +124,18 @@ server.beforeEach((request, response, next) => {
 
 // ----- Files Routes ------ //
 
-server.route('get', '/styles.css', (request, response) => {
-  response.sendFile('./public/styles.css', 'text/css');
+server.route('GET', '/styles.css', (request, response) => {
+  response.status(201).sendFile('./public/styles.css', 'text/css');
 });
 
-server.route('get', '/scripts.js', (request, response) => {
-  response.sendFile('./public/scripts.js', 'text/javascript');
+server.route('GET', '/scripts.js', (request, response) => {
+  response.status(201).sendFile('./public/scripts.js', 'text/javascript');
 });
 
 // ----- JSON Routes ------ //
 
 // Log a user in and give them a token
-server.route('post', '/api/login', (request, response) => {
-  
+server.route('POST', '/api/login', (request, response) => {
   const username = request.body.username;
   const password = request.body.password;
   
@@ -150,43 +149,84 @@ server.route('post', '/api/login', (request, response) => {
     const token = Math.floor(Math.random() * 1000000000).toString();
     SESSIONS.push({userId: user.userId, token: token});
     
-    response.setHeader('Set-Cookies', `token=${token}; Path=/;`);
-    
+    response.setHeader('Set-Cookie', `token=${token}; Path=/;`);
     response.status(200).json({message: 'Logged in Successfully'});
-    console.log(`User with id ${user.userId} logged in!`);
   } else {
     response.status(401).json({message: 'Invalid username or password'});
   }
   
 });
 
-// todo: Log user out
-server.route('delete', '/api/logout/', (request, response) => {
-
-});
-
-// todo: Update user information
-server.route('put', '/api/user', (request, response) => {
-
+// Log user out
+server.route('DELETE', '/api/logout', (request, response) => {
+  // Remove the session from DB
+  const sessionIndex = SESSIONS.findIndex(
+      session => session.userId === request.userId);
+  if (sessionIndex > -1) {
+    SESSIONS.splice(sessionIndex, 1);
+  }
+  // Deleting the cookie
+  response.setHeader('Set-Cookie', 'token=deleted; Path=/; Expires=Thu, 01' +
+      ' Jan 1970 00:00:00 GMT');
+  response.status(200).json({message: 'Logged out successfully'});
 });
 
 // Send user info
-server.route('get', '/api/user', (request, response) => {
+server.route('GET', '/api/user', (request, response) => {
   const user = USERS.find(user => user.userId === request.userId);
-  response.json({name: user.name, username: user.username});
+  response.json({username: user.username, name: user.name});
+});
+
+// Update user information
+server.route('PUT', '/api/user', (request, response) => {
+  const username = request.body.username;
+  const name = request.body.name;
+  const password = request.body.password;
+  
+  // Grab the current logged in user
+  const user = USERS.find(user => user.userId === request.userId);
+  
+  user.username = username;
+  user.name = name;
+  
+  // Only update the password if its provided
+  if (password) {
+    user.password = password;
+  }
+  
+  response.status(200).
+      json({
+        username: user.username,
+        name: user.name,
+        password_status: password ? 'updated' : 'not-updated',
+      });
 });
 
 // See the lists of all the posts that we have
-server.route('get', '/api/posts', (request, response) => {
+server.route('GET', '/api/posts', (request, response) => {
   const posts = POSTS.map((post) => {
-    post.author = USERS[post.userId - 1].name;
+    const matchedUser = USERS.find(user => user.userId === post.userId);
+    
+    if (matchedUser) {post.author = matchedUser.name;}
     return post;
   });
   
   response.status(200).json(posts);
+  
 });
 
-// todo: Create a new post
-server.route('post', '/api/new-post', (request, response) => {
-
+// Create a new post
+server.route('POST', '/api/posts', (request, response) => {
+  const title = request.body.title;
+  const body = request.body.body;
+  
+  const post = {
+    postId: POSTS.length + 1,
+    title: title,
+    body: body,
+    userId: request.userId,
+  };
+  
+  POSTS.unshift(post);
+  response.status(201).json(post);
 });
